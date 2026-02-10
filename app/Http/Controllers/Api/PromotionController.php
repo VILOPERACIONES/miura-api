@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Promotion;
 use Illuminate\Http\Request;
+use App\Http\Resources\PromotionResource;
 
 class PromotionController extends Controller
 {
@@ -24,8 +25,8 @@ class PromotionController extends Controller
             $query->where('type', $request->type);
         }
 
-        return response()->json(
-            $query->orderBy('created_at', 'desc')->get()
+        return PromotionResource::collection(
+        $query->orderBy('created_at', 'desc')->get()
         );
     }
 
@@ -34,10 +35,10 @@ class PromotionController extends Controller
      */
     public function active()
     {
-        return response()->json(
-            Promotion::where('is_active', true)
-                ->orderBy('created_at', 'desc')
-                ->get()
+        return PromotionResource::collection(
+        Promotion::where('is_active', true)
+            ->orderBy('created_at', 'desc')
+            ->get()
         );
     }
 
@@ -47,7 +48,8 @@ class PromotionController extends Controller
     public function show($id)
     {
         $promotion = Promotion::findOrFail($id);
-        return response()->json($promotion);
+
+        return new PromotionResource($promotion);
     }
 
     /**
@@ -56,6 +58,10 @@ class PromotionController extends Controller
      */
     public function store(Request $request)
     {
+        $request->merge([
+            'is_active' => filter_var($request->is_active, FILTER_VALIDATE_BOOLEAN),
+        ]);
+
         $validated = $request->validate([
             'type' => 'required|in:promo,evento',
             'title' => 'required|string|max:100',
@@ -83,7 +89,10 @@ class PromotionController extends Controller
             'is_active' => $validated['is_active'] ?? true,
         ]);
 
-        return response()->json($promotion, 201);
+        return response()->json(
+        new PromotionResource($promotion),
+        201
+        )  ;
     }
 
     /**
@@ -102,7 +111,7 @@ class PromotionController extends Controller
 
         $promotion->update($validated);
 
-        return response()->json($promotion);
+        return new PromotionResource($promotion);
     }
 
     /**
@@ -120,7 +129,7 @@ class PromotionController extends Controller
             'is_active' => $request->is_active,
         ]);
 
-        return response()->json($promotion);
+        return new PromotionResource($promotion);
     }
 
     /**
