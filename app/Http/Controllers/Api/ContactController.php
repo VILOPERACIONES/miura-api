@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class ContactController extends Controller
 {
@@ -16,18 +17,29 @@ class ContactController extends Controller
             'message' => 'required|string',
         ]);
 
-        // Usamos config() en lugar de env() porque env() devuelve null si la configuración está en caché.
-        $recipient = config('mail.from.address', 'info@miurahospitality.com');
+        try {
+            Mail::raw(
+                "Nombre: {$request->name}\n"
+                ."Correo: {$request->email}\n\n"
+                ."Mensaje:\n{$request->message}",
+                function ($mail) use ($request) {
+                    $mail->to('info@miurahospitality.com')
+                        ->from(
+                            config('mail.from.address'),
+                            config('mail.from.name')
+                        )
+                        ->replyTo($request->email, $request->name)
+                        ->subject('Nuevo mensaje desde Miura Website');
+                }
+            );
 
-        Mail::raw(
-            "Nombre: {$request->name}\nCorreo: {$request->email}\n\nMensaje:\n{$request->message}",
-            function ($mail) use ($request, $recipient) {
-                $mail->to($recipient)
-                    ->replyTo($request->email, $request->name)
-                    ->subject('Nuevo mensaje desde Miura Website');
-            }
-        );
-
-        return response()->json(['success' => true]);
+            return response()->json(['success' => true]);
+        } catch (\Exception $e) {
+            Log::error('Error al enviar correo via Brevo: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pudo enviar el correo. Por favor intente más tarde.'
+            ], 500);
+        }
     }
 }
