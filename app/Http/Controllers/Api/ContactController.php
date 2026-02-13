@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use App\Mail\ContactMessage;
 
 class ContactController extends Controller
 {
@@ -18,22 +19,14 @@ class ContactController extends Controller
         ]);
 
         try {
-            Mail::raw(
-                "Nombre: {$request->name}\n"
-                ."Correo: {$request->email}\n\n"
-                ."Mensaje:\n{$request->message}",
-                function ($mail) use ($request) {
-                    $mail->to('info@miurahospitality.com')
-                        ->from(
-                            config('mail.from.address'),
-                            config('mail.from.name')
-                        )
-                        ->replyTo($request->email, $request->name)
-                        ->subject('Nuevo mensaje desde Miura Website');
-                }
-            );
+        Mail::to('info@miurahospitality.com')
+            ->send(new ContactMessage(
+                $request->name,
+                $request->email,
+                $request->message
+            ));
 
-            return response()->json(['success' => true]);
+        return response()->json(['success' => true]);
         } catch (\Exception $e) {
             Log::error('Error al enviar correo via Brevo: ' . $e->getMessage());
             return response()->json([
