@@ -7,6 +7,7 @@ use App\Models\Promotion;
 use Illuminate\Http\Request;
 use App\Http\Resources\PromotionResource;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class PromotionController extends Controller
 {
@@ -113,9 +114,27 @@ class PromotionController extends Controller
             'title' => 'sometimes|string|max:100',
             'link' => 'sometimes|nullable|url',
             'is_active' => 'sometimes|boolean',
-            'image_desktop' => 'sometimes|image|mimes:jpg,jpeg,png,webp|max:2048',
-            'image_mobile'  => 'sometimes|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'image_desktop' => 'sometimes|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'image_mobile'  => 'sometimes|image|mimes:jpg,jpeg,png,webp|max:5120',
         ]);
+
+        // Manejo de image_desktop
+        if ($request->hasFile('image_desktop')) {
+            if ($promotion->image_desktop) {
+                Storage::disk('public')->delete($promotion->image_desktop);
+            }
+            $validated['image_desktop'] = $request->file('image_desktop')
+                ->store('promotions/desktop', 'public');
+        }
+
+        // Manejo de image_mobile
+        if ($request->hasFile('image_mobile')) {
+            if ($promotion->image_mobile) {
+                Storage::disk('public')->delete($promotion->image_mobile);
+            }
+            $validated['image_mobile'] = $request->file('image_mobile')
+                ->store('promotions/mobile', 'public');
+        }
 
         $promotion->update($validated);
 
@@ -146,7 +165,17 @@ class PromotionController extends Controller
      */
     public function destroy($id)
     {
-        Promotion::findOrFail($id)->delete();
+        $promotion = Promotion::findOrFail($id);
+
+        // Eliminar archivos físicos del disco antes de borrar el registro
+        if ($promotion->image_desktop) {
+            Storage::disk('public')->delete($promotion->image_desktop);
+        }
+        if ($promotion->image_mobile) {
+            Storage::disk('public')->delete($promotion->image_mobile);
+        }
+
+        $promotion->delete();
 
         return response()->json([
             'success' => true,
