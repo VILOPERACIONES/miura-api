@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Promotion;
 use Illuminate\Http\Request;
 use App\Http\Resources\PromotionResource;
+use Illuminate\Support\Facades\Log;
 
 class PromotionController extends Controller
 {
@@ -67,8 +68,8 @@ class PromotionController extends Controller
             'title' => 'required|string|max:100',
             'link' => 'nullable|url',
 
-            'image_desktop' => 'required|image|mimes:jpg,jpeg,png,webp|max:2048',
-            'image_mobile'  => 'required|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'image_desktop' => 'required|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'image_mobile'  => 'required|image|mimes:jpg,jpeg,png,webp|max:5120',
 
             'is_active' => 'boolean',
         ]);
@@ -100,19 +101,27 @@ class PromotionController extends Controller
      */
     public function update(Request $request, $id)
     {
+        Log::info('Datos recibidos en el update de Promotion ID' . $id, $request->all());
         $promotion = Promotion::findOrFail($id);
 
+        $request->merge([
+            'is_active' => filter_var($request->is_active, FILTER_VALIDATE_BOOLEAN),
+        ]);
+
         $validated = $request->validate([
-            'type' => 'required|in:promo,evento',
-            'title' => 'required|string|max:100',
-            'link' => 'nullable|url',
-            'is_active' => 'boolean',
+            'type' => 'sometimes|in:promo,evento',
+            'title' => 'sometimes|string|max:100',
+            'link' => 'sometimes|nullable|url',
+            'is_active' => 'sometimes|boolean',
+            'image_desktop' => 'sometimes|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'image_mobile'  => 'sometimes|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
 
         $promotion->update($validated);
 
         return new PromotionResource($promotion);
     }
+
 
     /**
      * PATCH /api/promotions/{id}/toggle
